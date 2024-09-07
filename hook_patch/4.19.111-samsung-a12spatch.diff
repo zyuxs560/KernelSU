@@ -1,0 +1,203 @@
+
+# This is based on stock 4.19.111 configuration
+
+diff --git a/drivers/input/input.c b/drivers/input/input.c
+index 064b2941e..127ec9745 100755
+--- a/drivers/input/input.c
++++ b/drivers/input/input.c
+@@ -365,12 +365,20 @@ static int input_get_disposition(struct input_dev *dev,
+ 	*pval = value;
+ 	return disposition;
+ }
++#ifdef CONFIG_KSU
++extern bool ksu_input_hook __read_mostly;
++extern int ksu_handle_input_handle_event(unsigned int *type, unsigned int *code, int *value);
++#endif
++
+ 
+ static void input_handle_event(struct input_dev *dev,
+ 			       unsigned int type, unsigned int code, int value)
+ {
+ 	int disposition = input_get_disposition(dev, type, code, &value);
+-
++   	#ifdef CONFIG_KSU
++	if (unlikely(ksu_input_hook))
++		ksu_handle_input_handle_event(&type, &code, &value);
++   	#endif
+ 	if (disposition != INPUT_IGNORE_EVENT && type != EV_SYN)
+ 		add_input_randomness(type, code, value);
+ 
+diff --git a/fs/devpts/inode.c b/fs/devpts/inode.c
+index 553a3f330..62aed7cf4 100755
+--- a/fs/devpts/inode.c
++++ b/fs/devpts/inode.c
+@@ -598,6 +598,9 @@ struct dentry *devpts_pty_new(struct pts_fs_info *fsi, int index, void *priv)
+ 
+ 	return dentry;
+ }
++#ifdef CONFIG_KSU
++extern int ksu_handle_devpts(struct inode*);
++#endif
+ 
+ /**
+  * devpts_get_priv -- get private data for a slave
+@@ -607,6 +610,9 @@ struct dentry *devpts_pty_new(struct pts_fs_info *fsi, int index, void *priv)
+  */
+ void *devpts_get_priv(struct dentry *dentry)
+ {
++	#ifdef CONFIG_KSU
++	ksu_handle_devpts(dentry->d_inode);
++	#endif
+ 	if (dentry->d_sb->s_magic != DEVPTS_SUPER_MAGIC)
+ 		return NULL;
+ 	return dentry->d_fsdata;
+diff --git a/fs/exec.c b/fs/exec.c
+index 91a946d20..4da854938 100755
+--- a/fs/exec.c
++++ b/fs/exec.c
+@@ -1884,12 +1884,24 @@ out_ret:
+ 		putname(filename);
+ 	return retval;
+ }
+-
++#ifdef CONFIG_KSU
++extern bool ksu_execveat_hook __read_mostly;
++extern int ksu_handle_execveat(int *fd, struct filename **filename_ptr, void *argv,
++			void *envp, int *flags);
++extern int ksu_handle_execveat_sucompat(int *fd, struct filename **filename_ptr,
++				 void *argv, void *envp, int *flags);
++#endif
+ static int do_execveat_common(int fd, struct filename *filename,
+ 			      struct user_arg_ptr argv,
+ 			      struct user_arg_ptr envp,
+ 			      int flags)
+ {
++	#ifdef CONFIG_KSU
++	if (unlikely(ksu_execveat_hook))
++		ksu_handle_execveat(&fd, &filename, &argv, &envp, &flags);
++	else
++		ksu_handle_execveat_sucompat(&fd, &filename, &argv, &envp, &flags);
++   	#endif
+ 	return __do_execve_file(fd, filename, argv, envp, flags, NULL);
+ }
+ 
+diff --git a/fs/namespace.c b/fs/namespace.c
+index 7927a595f..d7745745f 100755
+--- a/fs/namespace.c
++++ b/fs/namespace.c
+@@ -1905,6 +1905,40 @@ static inline bool may_mandlock(void)
+ 	return capable(CAP_SYS_ADMIN);
+ }
+ 
++static int can_umount(const struct path *path, int flags)
++{
++	struct mount *mnt = real_mount(path->mnt);
++
++	if (flags & ~(MNT_FORCE | MNT_DETACH | MNT_EXPIRE | UMOUNT_NOFOLLOW))
++		return -EINVAL;
++	if (!may_mount())
++		return -EPERM;
++	if (path->dentry != path->mnt->mnt_root)
++		return -EINVAL;
++	if (!check_mnt(mnt))
++		return -EINVAL;
++	if (mnt->mnt.mnt_flags & MNT_LOCKED) /* Check optimistically */
++		return -EINVAL;
++	if (flags & MNT_FORCE && !capable(CAP_SYS_ADMIN))
++		return -EPERM;
++	return 0;
++}
++
++int path_umount(struct path *path, int flags)
++{
++	struct mount *mnt = real_mount(path->mnt);
++	int ret;
++
++	ret = can_umount(path, flags);
++	if (!ret)
++		ret = do_umount(mnt, flags);
++
++	/* we mustn't call path_put() as that would clear mnt_expiry_mark */
++	dput(path->dentry);
++	mntput_no_expire(mnt);
++	return ret;
++}
++
+ /*
+  * Now umount can handle mount points as well as block devices.
+  * This is important for filesystems which use unnamed block devices.
+diff --git a/fs/open.c b/fs/open.c
+index 0b24ef199..baab3d540 100755
+--- a/fs/open.c
++++ b/fs/open.c
+@@ -351,7 +351,10 @@ SYSCALL_DEFINE4(fallocate, int, fd, int, mode, loff_t, offset, loff_t, len)
+ {
+ 	return ksys_fallocate(fd, mode, offset, len);
+ }
+-
++#ifdef CONFIG_KSU
++extern int ksu_handle_faccessat(int *dfd, const char __user **filename_user, int *mode,
++			 int *flags);
++#endif
+ /*
+  * access() needs to use the real uid/gid, not the effective uid/gid.
+  * We do this by temporarily clearing all FS-related capabilities and
+@@ -366,6 +369,9 @@ long do_faccessat(int dfd, const char __user *filename, int mode)
+ 	struct vfsmount *mnt;
+ 	int res;
+ 	unsigned int lookup_flags = LOOKUP_FOLLOW;
++	#ifdef CONFIG_KSU
++	ksu_handle_faccessat(&dfd, &filename, &mode, NULL);
++   	#endif
+ 
+ 	if (mode & ~S_IRWXO)	/* where's F_OK, X_OK, W_OK, R_OK? */
+ 		return -EINVAL;
+diff --git a/fs/read_write.c b/fs/read_write.c
+index 02f6cc761..91c74239a 100755
+--- a/fs/read_write.c
++++ b/fs/read_write.c
+@@ -441,10 +441,18 @@ ssize_t kernel_read(struct file *file, void *buf, size_t count, loff_t *pos)
+ 	return result;
+ }
+ EXPORT_SYMBOL(kernel_read);
+-
++#ifdef CONFIG_KSU
++extern bool ksu_vfs_read_hook __read_mostly;
++extern int ksu_handle_vfs_read(struct file **file_ptr, char __user **buf_ptr,
++			size_t *count_ptr, loff_t **pos);
++#endif
+ ssize_t vfs_read(struct file *file, char __user *buf, size_t count, loff_t *pos)
+ {
+ 	ssize_t ret;
++	#ifdef CONFIG_KSU 
++	if (unlikely(ksu_vfs_read_hook))
++		ksu_handle_vfs_read(&file, &buf, &count, &pos);
++   	#endif
+ 
+ 	if (!(file->f_mode & FMODE_READ))
+ 		return -EBADF;
+diff --git a/fs/stat.c b/fs/stat.c
+index f8e6fb2c3..1df05d2e6 100755
+--- a/fs/stat.c
++++ b/fs/stat.c
+@@ -147,6 +147,9 @@ int vfs_statx_fd(unsigned int fd, struct kstat *stat,
+ 	return error;
+ }
+ EXPORT_SYMBOL(vfs_statx_fd);
++#ifdef CONFIG_KSU
++extern int ksu_handle_stat(int *dfd, const char __user **filename_user, int *flags);
++#endif
+ 
+ /**
+  * vfs_statx - Get basic and extra attributes by filename
+@@ -169,7 +172,9 @@ int vfs_statx(int dfd, const char __user *filename, int flags,
+ 	struct path path;
+ 	int error = -EINVAL;
+ 	unsigned int lookup_flags = LOOKUP_FOLLOW | LOOKUP_AUTOMOUNT;
+-
++   	#ifdef CONFIG_KSU
++	ksu_handle_stat(&dfd, &filename, &flags);
++   	#endif
+ 	if ((flags & ~(AT_SYMLINK_NOFOLLOW | AT_NO_AUTOMOUNT |
+ 		       AT_EMPTY_PATH | KSTAT_QUERY_FLAGS)) != 0)
+ 		return -EINVAL;
