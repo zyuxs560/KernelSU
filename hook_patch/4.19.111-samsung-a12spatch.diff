@@ -1,8 +1,10 @@
 
 # This is based on stock 4.19.111 configuration
+# Samsung Galaxy A12s (A127F)
+
 
 diff --git a/drivers/input/input.c b/drivers/input/input.c
-index 064b2941e..127ec9745 100755
+# index 064b2941e..127ec9745 100755
 --- a/drivers/input/input.c
 +++ b/drivers/input/input.c
 @@ -365,12 +365,20 @@ static int input_get_disposition(struct input_dev *dev,
@@ -28,7 +30,7 @@ index 064b2941e..127ec9745 100755
  		add_input_randomness(type, code, value);
  
 diff --git a/fs/devpts/inode.c b/fs/devpts/inode.c
-index 553a3f330..62aed7cf4 100755
+# index 553a3f330..62aed7cf4 100755
 --- a/fs/devpts/inode.c
 +++ b/fs/devpts/inode.c
 @@ -598,6 +598,9 @@ struct dentry *devpts_pty_new(struct pts_fs_info *fsi, int index, void *priv)
@@ -52,7 +54,7 @@ index 553a3f330..62aed7cf4 100755
  		return NULL;
  	return dentry->d_fsdata;
 diff --git a/fs/exec.c b/fs/exec.c
-index 91a946d20..4da854938 100755
+# index 91a946d20..4da854938 100755
 --- a/fs/exec.c
 +++ b/fs/exec.c
 @@ -1884,12 +1884,24 @@ out_ret:
@@ -82,7 +84,7 @@ index 91a946d20..4da854938 100755
  }
  
 diff --git a/fs/namespace.c b/fs/namespace.c
-index 7927a595f..d7745745f 100755
+# index 7927a595f..d7745745f 100755
 --- a/fs/namespace.c
 +++ b/fs/namespace.c
 @@ -1905,6 +1905,40 @@ static inline bool may_mandlock(void)
@@ -127,7 +129,7 @@ index 7927a595f..d7745745f 100755
   * Now umount can handle mount points as well as block devices.
   * This is important for filesystems which use unnamed block devices.
 diff --git a/fs/open.c b/fs/open.c
-index 0b24ef199..baab3d540 100755
+# index 0b24ef199..baab3d540 100755
 --- a/fs/open.c
 +++ b/fs/open.c
 @@ -351,7 +351,10 @@ SYSCALL_DEFINE4(fallocate, int, fd, int, mode, loff_t, offset, loff_t, len)
@@ -153,7 +155,7 @@ index 0b24ef199..baab3d540 100755
  	if (mode & ~S_IRWXO)	/* where's F_OK, X_OK, W_OK, R_OK? */
  		return -EINVAL;
 diff --git a/fs/read_write.c b/fs/read_write.c
-index 02f6cc761..91c74239a 100755
+# index 02f6cc761..91c74239a 100755
 --- a/fs/read_write.c
 +++ b/fs/read_write.c
 @@ -441,10 +441,18 @@ ssize_t kernel_read(struct file *file, void *buf, size_t count, loff_t *pos)
@@ -177,7 +179,7 @@ index 02f6cc761..91c74239a 100755
  	if (!(file->f_mode & FMODE_READ))
  		return -EBADF;
 diff --git a/fs/stat.c b/fs/stat.c
-index f8e6fb2c3..1df05d2e6 100755
+# index f8e6fb2c3..1df05d2e6 100755
 --- a/fs/stat.c
 +++ b/fs/stat.c
 @@ -147,6 +147,9 @@ int vfs_statx_fd(unsigned int fd, struct kstat *stat,
