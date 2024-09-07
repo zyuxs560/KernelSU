@@ -1,5 +1,5 @@
-4.14 KernelSU Hook Patch
-* Make sure to disable CONFIG_KPROBE in your device's defconfig
+# 4.14 KernelSU Hook Patch
+# * Make sure to disable CONFIG_KPROBE in your device's defconfig
 
 --- a/fs/exec.c
 +++ b/fs/exec.c
