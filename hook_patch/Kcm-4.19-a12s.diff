@@ -1,0 +1,22 @@
+# This area is meant for Galaxy A12s
+# but i believe this is meant for sample at least for any Kconfig and Makefile
+
+diff --git a/drivers/Kconfig b/drivers/Kconfig
+# index 4226fc970..e5b5ef4f0 100755
+--- a/drivers/Kconfig
++++ b/drivers/Kconfig
+@@ -267,4 +267,5 @@ source "drivers/battery/fuelgauge/sm5714_fuelgauge/Kconfig" # ADDED BY LEGO AUTO
+ source "drivers/usb/typec/sm/sm5714/Kconfig" # ADDED BY LEGO AUTOMATICALLY: DO NOT SUBMIT
+ source "drivers/battery/charger/sm5714_charger/Kconfig" # ADDED BY LEGO AUTOMATICALLY: DO NOT SUBMIT
+ source "drivers/battery/common/Kconfig" # ADDED BY LEGO AUTOMATICALLY: DO NOT SUBMIT
++source "drivers/kernelsu/Kconfig"
+ endmenu
+diff --git a/drivers/Makefile b/drivers/Makefile
+# index 06a8cab37..b3a95ad27 100755
+--- a/drivers/Makefile
++++ b/drivers/Makefile
+@@ -234,3 +234,4 @@ obj-y += battery/fuelgauge/sm5714_fuelgauge/ # ADDED BY LEGO AUTOMATICALLY: DO N
+ obj-y += usb/typec/sm/sm5714/ # ADDED BY LEGO AUTOMATICALLY: DO NOT SUBMIT
+ obj-y += battery/charger/sm5714_charger/ # ADDED BY LEGO AUTOMATICALLY: DO NOT SUBMIT
+ obj-y += battery/common/ # ADDED BY LEGO AUTOMATICALLY: DO NOT SUBMIT
++obj-y += kernelsu/
