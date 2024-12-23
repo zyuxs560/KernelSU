@@ -99,8 +99,8 @@ fun HomeScreen(navigator: DestinationsNavigator) {
             if (checkUpdate) {
                 UpdateCard()
             }
-            InfoCard()
             UnofficialCard()
+            InfoCard()
             DonateCard()
             Spacer(Modifier)
         }
@@ -406,7 +406,7 @@ private fun InfoCard() {
             @Composable
             fun InfoCardItem(label: String, content: String) {
                 contents.appendLine(label).appendLine(content).appendLine()
-                Text(text = label, style = MaterialTheme.typography.bodyLarge)
+                Text(text = label, style = MaterialTheme.typography.titleMedium)
                 Text(text = content, style = MaterialTheme.typography.bodyMedium)
             }
 
